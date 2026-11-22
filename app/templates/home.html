@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block title %}Sari-Sari Tech | Student Marketplace{% endblock %}
+{% block content %}
+<section class="hero">
+ <div class="hero-copy"><span class="eyebrow">THE TUP MANILA STUDENT MARKETPLACE</span><h1>Find what you need.<br><em>Sell what you don't.</em></h1><p>A student-to-student marketplace for school essentials, pre-loved finds, food, and more.</p><div class="hero-actions"><a class="btn btn-light" href="{{ url_for('main.marketplace') }}">Explore marketplace</a><a class="text-link light-link" href="{{ url_for('main.sell') }}">Start selling →</a></div></div>
+ <div class="hero-art"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="floating-card card-a">📚 <span>Books & notes</span></div><div class="floating-card card-b">👕 <span>Pre-loved finds</span></div><div class="hero-bag">S</div><div class="sparkle sp-one">✦</div><div class="sparkle sp-two">✧</div></div>
+</section>
+<section class="section"><div class="section-heading"><div><span class="eyebrow">BROWSE BY CATEGORY</span><h2>What are you looking for?</h2></div><a class="text-link" href="{{ url_for('main.marketplace') }}">View all categories →</a></div>
+<div class="category-grid">{% for category in categories %}<a class="category-tile" href="{{ url_for('main.marketplace', category=category.id) }}"><span class="category-icon">{{ ['👕','🏃','🎽','🧥','🍱','🎒','🧶','✏️','💻','📚','👜','✨'][loop.index0 % 12] }}</span><b>{{ category.name }}</b><small>Explore listings</small></a>{% endfor %}</div></section>
+<section class="section"><div class="section-heading"><div><span class="eyebrow">FRESH FINDS</span><h2>Recently listed</h2><p class="muted">Discover what fellow students are offering.</p></div><a class="text-link" href="{{ url_for('main.marketplace') }}">Explore marketplace →</a></div>
+{% if featured %}<div class="product-grid">{% for listing in featured %}{% include "_product_card.html" %}{% endfor %}</div>{% else %}<div class="empty-state"><div>🛍️</div><h3>Your marketplace starts here</h3><p>There are no listings yet. Be one of the first to post a product.</p><a class="btn btn-primary" href="{{ url_for('main.sell') }}">Post a product</a></div>{% endif %}</section>
+<section class="promo"><div><span class="eyebrow">GOT SOMETHING TO SELL?</span><h2>Give your pre-loved things a new home.</h2><p>Make useful finds easier to discover within the student community.</p></div><a class="btn btn-light" href="{{ url_for('main.sell') }}">Post a listing →</a></section>
+{% endblock %}
