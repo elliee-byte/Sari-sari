@@ -13,6 +13,12 @@ CONDITIONS = ["Brand New", "Like New", "Gently Used", "Used", "Heavily Used"]
 STATUSES = ["Available", "Reserved", "Sold"]
 CATEGORIES = ["TUP Uniforms","PATHFIT Uniforms", "NSTP Uniforms", "Secondhand Wearables", "Food", "ACSO Merchandise", "Handcrafted Items", "School Supplies", "Electronics and Gadgets", "Books and Learning Materials", "Accessories", "Others"]
 
+def seed_categories():
+    for name in CATEGORIES:
+        if not Category.query.filter_by(name=name).first():
+            db.session.add(Category(name=name, is_active=True))
+    db.session.commit()
+    
 def save_images(files):
     saved = []
     upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
