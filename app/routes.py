@@ -11,6 +11,7 @@ main = Blueprint("main", __name__)
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 CONDITIONS = ["Brand New", "Like New", "Gently Used", "Used", "Heavily Used"]
 STATUSES = ["Available", "Reserved", "Sold"]
+CATEGORIES = ["TUP Uniforms","PATHFIT Uniforms", "NSTP Uniforms", "Secondhand Wearables", "Food", "ACSO Merchandise", "Handcrafted Items", "School Supplies", "Electronics and Gadgets", "Books and Learning Materials", "Accessories", "Others"]
 
 def save_images(files):
     saved = []
