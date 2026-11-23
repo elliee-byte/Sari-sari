@@ -1,12 +1,13 @@
 import os, uuid
 from pathlib import Path
 from urllib.parse import urlparse
+from sqlalchemy import update, case
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 from PIL import Image
 from .extensions import db
-from .models import User, Category, Listing, ListingImage, Favorite
+from .models import User, Category, Listing, ListingImage, Favorite, Order
 
 main = Blueprint("main", __name__)
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
@@ -19,7 +20,7 @@ def seed_categories():
         if not Category.query.filter_by(name=name).first():
             db.session.add(Category(name=name, is_active=True))
     db.session.commit()
-    
+
 def save_images(files):
     saved = []
     upload_dir = Path(current_app.config["UPLOAD_FOLDER"])
@@ -102,6 +103,68 @@ def listing_detail(listing_id):
         Listing.id != listing.id, Listing.status == "Available",
         Listing.moderation_status == "normal").limit(4).all()
     return render_template("listing_detail.html", listing=listing, related=related)
+
+@main.route("/listing/<int:listing_id>/buy", methods=["POST"])
+@login_required
+def buy_listing(listing_id):
+    order_quantity = request.form.get("quantity", type=int)
+    if order_quantity is None or order_quantity < 1:
+        flash("Please enter a valid quantity.", "error")
+        return redirect(url_for("main.listing_detail", listing_id=listing_id))
+    listing = db.get_or_404(Listing, listing_id)
+    if listing.seller_id == current_user.id:
+        flash("You cannot buy your own listing.", "error")
+        return redirect(url_for("main.listing_detail", listing_id=listing_id))
+    if listing.status != "Available" or listing.moderation_status != "normal":
+        flash("This product is not currently available.", "error")
+        return redirect(url_for("main.marketplace"))
+    unit_price = listing.price
+    result = db.session.execute(update(Listing).where(
+        Listing.id == listing_id, Listing.status == "Available",
+        Listing.moderation_status == "normal", Listing.quantity >= order_quantity
+    ).values(quantity=Listing.quantity - order_quantity, status=case(
+        (Listing.quantity == order_quantity, "Sold"), else_=Listing.status)))
+    if result.rowcount != 1:
+        db.session.rollback()
+        flash("Not enough stock is available. Please refresh the page and try again.", "error")
+        return redirect(url_for("main.listing_detail", listing_id=listing_id))
+    db.session.add(Order(buyer_id=current_user.id, listing_id=listing_id, quantity=order_quantity, unit_price=unit_price, status="Pending"))
+    db.session.commit()
+    flash("Your order was placed. The available quantity has been updated.", "success")
+    return redirect(url_for("main.my_orders"))
+
+@main.route("/my-orders")
+@login_required
+def my_orders():
+    orders = Order.query.filter_by(buyer_id=current_user.id).order_by(Order.created_at.desc()).all()
+    return render_template("my_orders.html", orders=orders, page_title="My Orders")
+
+@main.route("/my-sales")
+@login_required
+def my_sales():
+    orders = Order.query.join(Listing).filter(Listing.seller_id == current_user.id).order_by(Order.created_at.desc()).all()
+    return render_template("my_orders.html", orders=orders, page_title="Orders for My Products", seller_view=True)
+
+@main.route("/order/<int:order_id>/status", methods=["POST"])
+@login_required
+def update_order_status(order_id):
+    order = db.get_or_404(Order, order_id)
+    if order.listing.seller_id != current_user.id:
+        abort(403)
+    new_status = request.form.get("status")
+    if new_status not in {"Confirmed", "Cancelled", "Completed"} or order.status != "Pending":
+        flash("This order can no longer be changed.", "error")
+        return redirect(url_for("main.my_sales"))
+    result = db.session.execute(update(Order).where(Order.id == order.id, Order.status == "Pending").values(status=new_status))
+    if result.rowcount != 1:
+        db.session.rollback()
+        flash("This order was already updated.", "error")
+        return redirect(url_for("main.my_sales"))
+    if new_status == "Cancelled":
+        db.session.execute(update(Listing).where(Listing.id == order.listing_id).values(quantity=Listing.quantity + order.quantity, status="Available"))
+    db.session.commit()
+    flash("Order status updated.", "success")
+    return redirect(url_for("main.my_sales"))
 
 @main.route("/register", methods=["GET", "POST"])
 def register():

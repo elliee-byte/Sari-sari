@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} | Sari-Sari Tech{% endblock %}
+{% block content %}
+<div class="page-intro"><span class="eyebrow">ORDER MANAGEMENT</span><h1>{{ page_title }}</h1><p>{% if seller_view %}Review orders placed for your products.{% else %}Track the products you've ordered.{% endif %}</p></div>
+{% if orders %}<div class="orders-list">
+{% for order in orders %}<article class="order-card">
+<div class="order-thumb">{% if order.listing.images %}<img src="{{ url_for('uploaded_file', filename=order.listing.images[0].filename) }}" alt="{{ order.listing.title }}">{% else %}<span>{{ order.listing.category.name[:1] }}</span>{% endif %}</div>
+<div class="order-main"><a href="{{ url_for('main.listing_detail', listing_id=order.listing.id) }}"><b>{{ order.listing.title }}</b></a><small>Order #{{ order.id }} · {{ order.created_at.strftime('%b %d, %Y %I:%M %p') }}</small>
+{% if seller_view %}<small>Buyer: {{ order.buyer.full_name }} (@{{ order.buyer.username }})</small>{% else %}<small>Seller: {{ order.listing.seller.full_name }} (@{{ order.listing.seller.username }})</small>{% endif %}
+<small>Quantity: {{ order.quantity }} × ₱{{ '%.2f'|format(order.unit_price) }} = <b>₱{{ '%.2f'|format(order.quantity * order.unit_price) }}</b></small><span class="order-status status-{{ order.status|lower }}">{{ order.status }}</span></div>
+{% if seller_view and order.status == "Pending" %}<form class="order-actions" method="post" action="{{ url_for('main.update_order_status', order_id=order.id) }}"><button class="btn btn-primary btn-small" name="status" value="Confirmed">Confirm</button><button class="btn btn-outline btn-small" name="status" value="Cancelled" onclick="return confirm('Cancel this order and return the quantity to your stock?')">Cancel & Restock</button></form>{% endif %}
+{% if not seller_view and order.listing.seller.facebook_url %}<a class="btn btn-facebook btn-small" href="{{ order.listing.seller.facebook_url }}" target="_blank" rel="noopener noreferrer">Contact Seller ↗</a>{% endif %}
+</article>{% endfor %}</div>
+{% else %}<div class="empty-state"><div>🧾</div><h3>No orders yet</h3><p>{% if seller_view %}Orders for your products will appear here.{% else %}Products you order will appear here.{% endif %}</p><a class="btn btn-primary" href="{{ url_for('main.marketplace') }}">Browse marketplace</a></div>{% endif %}
+{% endblock %}
