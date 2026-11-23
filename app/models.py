@@ -74,3 +74,25 @@ class Favorite(db.Model):
     listing_id = db.Column(db.Integer, db.ForeignKey("listing.id"), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     __table_args__ = (db.UniqueConstraint("user_id", "listing_id", name="unique_user_favorite"),)
+
+
+class Order(db.Model):
+    """A customer order that reserves stock from a marketplace listing."""
+    id = db.Column(db.Integer, primary_key=True)
+    buyer_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    listing_id = db.Column(db.Integer, db.ForeignKey("listing.id"), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    unit_price = db.Column(db.Float, nullable=False)
+    status = db.Column(db.String(20), default="Pending", nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    buyer = db.relationship(
+        "User",
+        foreign_keys=[buyer_id],
+        backref=db.backref("orders", lazy=True)
+    )
+    listing = db.relationship(
+        "Listing",
+        foreign_keys=[listing_id],
+        backref=db.backref("orders", lazy=True)
+    )
