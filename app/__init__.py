@@ -46,5 +46,8 @@ def create_app():
     # Create database tables
     with app.app_context():
         db.create_all()
+        # Add the default selectable categories when the database is first created.
+        from app.routes import seed_categories
+        seed_categories()
 
     return app
