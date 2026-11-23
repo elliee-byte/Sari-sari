@@ -1,5 +1,6 @@
 import os, uuid
 from pathlib import Path
+from urllib.parse import urlparse
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
@@ -151,6 +152,68 @@ def logout():
     logout_user()
     flash("You have been logged out.", "success")
     return redirect(url_for("main.home"))
+
+
+
+def normalize_facebook_url(value):
+    """Accept only Facebook profile/page URLs, not arbitrary external URLs."""
+    value = (value or "").strip()
+    if not value:
+        return None
+    if not value.startswith(("https://", "http://")):
+        value = "https://" + value
+    parsed = urlparse(value)
+    host = (parsed.hostname or "").lower()
+    allowed_hosts = {"facebook.com", "www.facebook.com", "m.facebook.com", "fb.me", "www.fb.me"}
+    if parsed.scheme != "https" or host not in allowed_hosts or not parsed.path.strip("/"):
+        raise ValueError("Enter a valid Facebook profile or Page link (for example, https://www.facebook.com/yourname).")
+    return value
+
+
+@main.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    if request.method == "POST":
+        full_name = request.form.get("full_name", "").strip()
+        program = request.form.get("program", "").strip()
+        year_level = request.form.get("year_level", "").strip()
+        bio = request.form.get("bio", "").strip()
+        try:
+            facebook_url = normalize_facebook_url(request.form.get("facebook_url"))
+            if not full_name:
+                raise ValueError("Your name cannot be empty.")
+            if len(full_name) > 120 or len(program) > 100 or len(year_level) > 30 or len(bio) > 500:
+                raise ValueError("Please keep your name, program, year level, and bio within the indicated limits.")
+
+            old_photo = current_user.profile_photo
+            photo = request.files.get("profile_photo")
+            uploaded = save_images([photo]) if photo and photo.filename else []
+            current_user.full_name = full_name
+            current_user.program = program or None
+            current_user.year_level = year_level or None
+            current_user.bio = bio or None
+            current_user.facebook_url = facebook_url
+            if uploaded:
+                current_user.profile_photo = uploaded[0]
+            db.session.commit()
+
+            if uploaded and old_photo:
+                old_path = Path(current_app.config["UPLOAD_FOLDER"]) / old_photo
+                old_path.unlink(missing_ok=True)
+            flash("Your profile has been updated.", "success")
+            return redirect(url_for("main.profile"))
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "error")
+
+    return render_template("profile.html", profile_user=current_user, editable=True)
+
+
+@main.route("/user/<username>")
+def public_profile(username):
+    profile_user = User.query.filter_by(username=username).first_or_404()
+    return render_template("profile.html", profile_user=profile_user, editable=False)
+
 
 @main.route("/sell", methods=["GET", "POST"])
 @login_required
