@@ -5,12 +5,11 @@
   <title>{% block title %}Sari-Sari Tech{% endblock %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body data-theme-user="{{ current_user.id if current_user.is_authenticated else 'guest' }}">
+<body>
 <header class="site-header">
   <a class="brand" href="{{ url_for('main.home') }}"><span class="brand-mark">S</span><span>Sari-Sari <b>Tech</b><small>Student Marketplace</small></span></a>
   <form class="header-search" action="{{ url_for('main.marketplace') }}"><input name="q" placeholder="Search products..." value="{{ request.args.get('q','') }}"><button aria-label="Search">⌕</button></form>
   <button class="menu-toggle" onclick="document.querySelector('.nav-links').classList.toggle('open')" aria-label="Toggle menu">☰</button>
-  <div class="appearance-controls"><label for="theme-select">Theme</label><select id="theme-select" aria-label="Choose website theme"><option value="light">Light</option><option value="dark">Dark</option><option value="contrast">High contrast</option><option value="beige">Beige</option></select><label for="accent-color">Accent</label><input id="accent-color" type="color" value="#b51f32" title="Choose your own accent color" aria-label="Choose accent color"></div>
   <nav class="nav-links">
     <a href="{{ url_for('main.home') }}">Home</a><a href="{{ url_for('main.marketplace') }}">Marketplace</a>
     {% if current_user.is_authenticated %}
